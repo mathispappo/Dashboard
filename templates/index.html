@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload CSV File</title>
+    <title>Upload CSV Files</title>
 </head>
 <body>
-    <h1>Upload your CSV file</h1>
+    <h1>Upload your CSV files from a folder</h1>
     <form action="/upload" method="post" enctype="multipart/form-data">
-        <input type="file" name="file" accept=".csv">
+        <!-- Use 'multiple' to allow multiple file selection -->
+        <!-- Use 'webkitdirectory' to allow folder selection (Chrome) -->
+        <input type="file" name="files" accept=".csv" webkitdirectory multiple>
         <button type="submit">Upload</button>
     </form>
     {% with messages = get_flashed_messages() %}
