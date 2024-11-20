@@ -10,11 +10,9 @@ app.secret_key = 'your_secret_key'  # Required for flashing messages
 UPLOAD_FOLDER = 'data'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Ensure the folder exists
 
-
 @app.route('/')
 def index():
     return render_template('index.html')
-
 
 @app.route('/upload', methods=['POST'])
 def upload_files():
@@ -61,6 +59,20 @@ def upload_files():
         flash(f'{files_invalid} files were invalid (not exactly 4 columns) and were not uploaded.')
     return redirect(url_for('index'))
 
+@app.route('/search', methods=['GET'])
+def search_file():
+    file_name = request.args.get('file_name')
+    if not file_name:
+        flash('Please enter a file name to search.')
+        return redirect(url_for('index'))
+
+    file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file_name))
+
+    if os.path.exists(file_path):
+        flash(f'File "{file_name}" found in the "data" folder.')
+    else:
+        flash(f'File "{file_name}" does not exist in the "data" folder.')
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(debug=True)

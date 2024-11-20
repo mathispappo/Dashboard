@@ -3,16 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload CSV Files</title>
+    <title>CSV File Manager</title>
 </head>
 <body>
-    <h1>Upload your CSV files from a folder</h1>
+    <h1>Upload or Search CSV Files</h1>
+
+    <!-- Upload Form -->
+    <h2>Upload CSV Files</h2>
     <form action="/upload" method="post" enctype="multipart/form-data">
-        <!-- Use 'multiple' to allow multiple file selection -->
-        <!-- Use 'webkitdirectory' to allow folder selection (Chrome) -->
-        <input type="file" name="files" accept=".csv" webkitdirectory multiple>
+        <input type="file" name="files" multiple accept=".csv">
         <button type="submit">Upload</button>
     </form>
+
+    <!-- Search Form -->
+    <h2>Search for a CSV File</h2>
+    <form action="/search" method="get">
+        <input type="text" name="file_name" placeholder="Enter CSV file name">
+        <button type="submit">Validate</button>
+    </form>
+
+    <!-- Flash Messages -->
     {% with messages = get_flashed_messages() %}
       {% if messages %}
         <ul>
