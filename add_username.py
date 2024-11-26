@@ -9,7 +9,7 @@ def connect_to_database():
     return pymysql.connect(
         host='localhost',
         user='root',
-        password='root',
+        password='', # Change to your password
         database='dataviz_m2_proj',
         charset='utf8mb4',
     )
@@ -123,6 +123,6 @@ def integrate_csv_to_database(folder_path):
 
 
 # Example usage
-folder_path = 'D:\_Lionel\data_viz_project\Dashboard\data'  # Replace with the path to your folder containing CSV files
+folder_path = '/Users/mathispappo/Documents/Applications\ of\ Big\ Data/DataViz/data'  # Replace with the path to your folder containing CSV files
 create_listening_table_if_not_exist()  # Ensure the table exists before integrating data
 integrate_csv_to_database(folder_path)
