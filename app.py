@@ -58,16 +58,9 @@ def upload_files():
 # Route for integration
 @app.route('/integration', methods=['POST'])
 def integration():
-    # Ensure that the input directory is an absolute path
-    input_directory = os.path.join(os.path.dirname(__file__), 'data')  # Use relative path if running the script from the project root
-    output_directory = os.path.join(os.path.dirname(__file__), 'download')  # Output directory for processed files
-
-    # Ensure the output directory exists before running the function
-    ensure_directory_exists(output_directory)
-
-    # Now process the CSV files in the given directory
+    # Process the CSV files in the 'download' folder
     create_listening_table_if_not_exist()  # Ensure the table exists before integrating data
-    integrate_csv_to_database(output_directory)
+    integrate_csv_to_database(DOWNLOAD_FOLDER)
 
     # After integration, delete all the files in the DOWNLOAD_FOLDER
     delete_files_in_directory(DOWNLOAD_FOLDER)
