@@ -35,8 +35,22 @@ def create_listening_table_if_not_exist():
         connection.close()
 
 
+# Ensure the given directory exists
+def ensure_directory_exists(directory):
+    """Ensure that the directory exists, if not, create it."""
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+        print(f"Directory created: {directory}")
+
+
 # Process CSV files in a folder and integrate them into the ListeningDetailed table
 def integrate_csv_to_database(folder_path):
+    # Ensure the folder path is valid
+    folder_path = os.path.abspath(folder_path)
+    if not os.path.exists(folder_path):
+        print(f"Error: The folder path '{folder_path}' does not exist!")
+        return
+
     connection = connect_to_database()
 
     try:
@@ -97,7 +111,14 @@ def integrate_csv_to_database(folder_path):
         connection.close()
 
 
-# Example usage
-folder_path = 'D:\_Lionel\data_viz_project\Dashboard\data'  # Replace with the path to your folder containing CSV files
-create_listening_table_if_not_exist()  # Ensure the table exists before integrating data
-integrate_csv_to_database(folder_path)
+# def integration():
+#     # Ensure that the input directory is an absolute path
+#     input_directory = os.path.join(os.path.dirname(__file__), 'data')  # Use relative path if running the script from the project root
+#     output_directory = os.path.join(os.path.dirname(__file__), 'download')  # Output directory for processed files
+
+#     # Ensure the output directory exists before running the function
+#     ensure_directory_exists(output_directory)
+
+#     # Now process the CSV files in the given directory
+#     create_listening_table_if_not_exist()  # Ensure the table exists before integrating data
+#     integrate_csv_to_database(output_directory)

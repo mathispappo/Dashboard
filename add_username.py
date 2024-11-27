@@ -1,128 +1,83 @@
-import os
 import csv
-from datetime import datetime
-import pymysql
+import os
 
 
-# Database connection
-def connect_to_database():
-    return pymysql.connect(
-        host='localhost',
-        user='root',
-        password='root',
-        database='dataviz_m2_proj',
-        charset='utf8mb4',
-    )
+def ensure_directory_exists(directory):
+    """
+    Ensure the given directory exists. If not, create it.
+    """
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+        print(f"Created directory: {directory}")
 
 
-# Ensure the ListeningDetailed table exists in the database
-def create_listening_table_if_not_exist():
-    connection = connect_to_database()
+def add_username_column_to_csv(file_path, output_directory):
+    """
+    Process a CSV file to add a 'username' column and ensure all required columns are present.
+    Save the processed file to the output directory.
+    """
     try:
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS ListeningDetailed (
-                    listening_id INT PRIMARY KEY AUTO_INCREMENT,
-                    username VARCHAR(50) NOT NULL,
-                    artist_name VARCHAR(100) NOT NULL,
-                    album_name VARCHAR(100) NOT NULL,
-                    song_name VARCHAR(100) NOT NULL,
-                    date_listened DATETIME,
-                    UNIQUE (username, artist_name, album_name, song_name, date_listened)
-                );
-            """)
-            connection.commit()
-    finally:
-        connection.close()
+        # Extract the username from the filename (excluding the extension)
+        username = os.path.splitext(os.path.basename(file_path))[0]
 
+        # Define the expected headers
+        expected_headers = ['username', 'artist', 'album', 'song', 'date']
 
-# Function to check if a string is valid UTF-8
-def is_utf8_valid(text):
-    try:
-        text.encode('utf-8')
-        return True
-    except UnicodeEncodeError:
-        return False
+        # Ensure the output directory exists before attempting to save the file
+        ensure_directory_exists(output_directory)
 
+        # Prepare the output file path (same filename, but in the output directory)
+        output_file_path = os.path.join(output_directory, os.path.basename(file_path))
 
-# Process CSV files in a folder and integrate them into the ListeningDetailed table
-def integrate_csv_to_database(folder_path):
-    connection = connect_to_database()
+        # Open the original file and the output file
+        with open(file_path, mode='r', encoding='utf-8') as infile, open(output_file_path, mode='w', encoding='utf-8', newline='') as outfile:
+            csv_reader = csv.reader(infile)
+            csv_writer = csv.writer(outfile)
 
-    try:
-        with connection.cursor() as cursor:
-            # Iterate over each file in the folder
-            for filename in os.listdir(folder_path):
-                if filename.endswith('.csv'):
-                    # Extract username from the filename (e.g., "username.csv")
-                    username = os.path.splitext(filename)[0]
+            # Write the headers to the output file
+            csv_writer.writerow(expected_headers)
 
-                    # Open and process the CSV file
-                    file_path = os.path.join(folder_path, filename)
-                    with open(file_path, mode='r', encoding='utf-8') as csvfile:
-                        csvreader = csv.reader(csvfile)
+            # Iterate over the rows and modify them
+            for row in csv_reader:
+                # If row has missing columns, add empty values for missing ones
+                while len(row) < len(expected_headers) - 1:  # Exclude 'username'
+                    row.append('')  # Fill missing values with empty strings
 
-                        for row in csvreader:
-                            if len(row) != 5:  # Ensure there are 5 columns in the row
-                                print(f"Skipping invalid row: {row}")
-                                continue
+                # Prepend the username to the row
+                row = [username] + row[:len(expected_headers) - 1]
 
-                            # Extract data from the row
-                            username_from_file, artist_name, album_title, song_title, date_listened = row
+                # Write the updated row to the output file
+                csv_writer.writerow(row)
 
-                            # Skip rows with invalid UTF-8 characters
-                            if not all(is_utf8_valid(field) for field in row):
-                                print(f"Skipping row with non-UTF-8 characters: {row}")
-                                continue
-
-                            # Skip rows with missing elements
-                            if not all(row):
-                                print(f"Skipping row with missing elements: {row}")
-                                continue
-
-                            # Ensure the username matches the filename
-                            if username != username_from_file:
-                                print(
-                                    f"Skipping row with mismatched username. Expected {username}, found {username_from_file}")
-                                continue
-
-                            # Truncate data to fit within column limits (if necessary)
-                            artist_name = artist_name[:100]  # Ensure artist name is no longer than 100 characters
-                            album_title = album_title[:100]  # Ensure album title is no longer than 100 characters
-                            song_title = song_title[:100]  # Ensure song title is no longer than 100 characters
-
-                            # Convert the date to the appropriate format
-                            try:
-                                date_obj = datetime.strptime(date_listened, "%d %b %Y %H:%M")
-                                formatted_date = date_obj.strftime("%Y-%m-%d %H:%M:%S")
-                            except ValueError:
-                                # If the date format is invalid, skip this row
-                                print(f"Skipping row with invalid date: {row}")
-                                continue
-
-                            # Check if the listening record already exists in ListeningDetailed table
-                            cursor.execute("""
-                                SELECT * FROM ListeningDetailed 
-                                WHERE username = %s AND artist_name = %s AND album_name = %s AND song_name = %s AND date_listened = %s
-                            """, (username, artist_name, album_title, song_title, formatted_date))
-
-                            if not cursor.fetchone():  # If no record exists, insert it
-                                cursor.execute("""
-                                    INSERT INTO ListeningDetailed (username, artist_name, album_name, song_name, date_listened)
-                                    VALUES (%s, %s, %s, %s, %s)
-                                """, (username, artist_name, album_title, song_title, formatted_date))
-                                connection.commit()
-                            else:
-                                print(
-                                    f"Skipping duplicate listening entry for {username}, {song_title}, {formatted_date}")
+        print(f"File processed: {file_path}, saved to: {output_file_path}")
 
     except Exception as e:
-        print(f"An error occurred: {e}")
-    finally:
-        connection.close()
+        print(f"An error occurred while processing {file_path}: {e}")
 
 
-# Example usage
-folder_path = 'D:\_Lionel\data_viz_project\Dashboard\data'  # Replace with the path to your folder containing CSV files
-create_listening_table_if_not_exist()  # Ensure the table exists before integrating data
-integrate_csv_to_database(folder_path)
+def process_all_files_in_directory(input_directory, output_directory):
+    """
+    Process all CSV files in the input directory and save the results to the output directory.
+    """
+    # Ensure the output directory exists
+    ensure_directory_exists(output_directory)
+
+    # Iterate over all files in the input directory
+    for filename in os.listdir(input_directory):
+        if filename.endswith('.csv'):  # Process only CSV files
+            file_path = os.path.join(input_directory, filename)
+            print(f"Processing file: {file_path}")
+
+            # Process the file and save the result to the output directory
+            add_username_column_to_csv(file_path, output_directory)
+
+
+if __name__ == '__main__':
+    # Define the input and output directories (relative to the script's location)
+    input_directory = os.path.join(os.path.dirname(__file__), 'data')  # Folder containing input files
+    output_directory = os.path.join(os.path.dirname(__file__), 'download')  # Folder to store processed files
+
+    # Process all files in the input directory
+    process_all_files_in_directory(input_directory, output_directory)
+
+    print(f"All files processed. Processed files are saved in the '{output_directory}' directory.")

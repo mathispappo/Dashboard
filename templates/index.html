@@ -4,33 +4,122 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CSV File Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 1rem 2rem;
+            text-align: center;
+        }
+        main {
+            margin: 2rem;
+            padding: 1rem;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        h1, h2 {
+            color: #4CAF50;
+        }
+        form {
+            margin-bottom: 2rem;
+        }
+        input[type="file"], input[type="text"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-top: 8px;
+            margin-bottom: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .messages {
+            margin: 1rem 0;
+            padding: 1rem;
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+        }
+        ul {
+            padding: 0;
+            list-style-type: none;
+        }
+        li {
+            margin: 0.5rem 0;
+        }
+        footer {
+            text-align: center;
+            padding: 1rem;
+            margin-top: 2rem;
+            background: #f1f1f1;
+        }
+    </style>
 </head>
 <body>
-    <h1>Upload or Search CSV Files</h1>
+    <header>
+        <h1>CSV File Manager</h1>
+    </header>
 
-    <!-- Upload Form -->
-    <h2>Upload CSV Files</h2>
-    <form action="/upload" method="post" enctype="multipart/form-data">
-        <input type="file" name="files" multiple accept=".csv">
-        <button type="submit">Upload</button>
-    </form>
+    <main>
+        <!-- Upload Form -->
+        <h2>Upload CSV Files</h2>
+        <form action="/upload" method="post" enctype="multipart/form-data">
+            <label for="files">Select one or more CSV files:</label>
+            <input type="file" id="files" name="files" multiple accept=".csv">
+            <button type="submit">Upload</button>
+        </form>
 
-    <!-- Search Form -->
-    <h2>Search for a CSV File</h2>
-    <form action="/search" method="get">
-        <input type="text" name="file_name" placeholder="Enter CSV file name">
-        <button type="submit">Validate</button>
-    </form>
+        <!-- Search Form -->
+        <h2>Search for a CSV File</h2>
+        <form action="/search" method="get">
+            <label for="file_name">Enter CSV file name:</label>
+            <input type="text" id="file_name" name="file_name" placeholder="Enter CSV file name">
+            <button type="submit">Search</button>
+        </form>
 
-    <!-- Flash Messages -->
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        <ul>
-          {% for message in messages %}
-            <li>{{ message }}</li>
-          {% endfor %}
-        </ul>
-      {% endif %}
-    {% endwith %}
+        <!-- Integration Form (the new button) -->
+        <h2>Integration</h2>
+        <form action="/integration" method="post">
+            <button type="submit">Start Integration</button>
+        </form>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div class="messages">
+              <ul>
+                {% for message in messages %}
+                  <li>{{ message }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+        {% endwith %}
+    </main>
+
+    <footer>
+        <p>&copy; 2024 CSV File Manager</p>
+    </footer>
 </body>
 </html>
