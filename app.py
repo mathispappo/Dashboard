@@ -1,5 +1,5 @@
-from flask import Flask, request, render_template, flash, redirect, url_for
 import os
+from flask import Flask, request, render_template, flash, redirect, url_for
 from Add_file_to_sql import integrate_csv_to_database, create_listening_table_if_not_exist
 from add_username import add_username_column_to_csv
 
@@ -69,7 +69,10 @@ def integration():
     create_listening_table_if_not_exist()  # Ensure the table exists before integrating data
     integrate_csv_to_database(output_directory)
 
-    flash("Integration complete!")
+    # After integration, delete all the files in the DOWNLOAD_FOLDER
+    delete_files_in_directory(DOWNLOAD_FOLDER)
+
+    flash("Integration complete and files deleted!")
     return redirect(url_for('index'))
 
 
@@ -80,6 +83,15 @@ def ensure_directory_exists(directory):
         os.makedirs(directory)
         print(f"Directory created: {directory}")
 
+
+# Function to delete all files in a directory
+def delete_files_in_directory(directory):
+    """Delete all files in the specified directory."""
+    for filename in os.listdir(directory):
+        file_path = os.path.join(directory, filename)
+        if os.path.isfile(file_path):  # Only delete files (not subdirectories)
+            os.remove(file_path)
+            print(f"Deleted file: {file_path}")
 
 if __name__ == '__main__':
     app.run(debug=True)
