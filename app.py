@@ -1,6 +1,6 @@
 import os
 from flask import Flask, request, render_template, flash, redirect, url_for
-from Add_file_to_sql import integrate_csv_to_database, create_listening_table_if_not_exist
+from Add_file_to_sql import integrate_csv_to_database, create_listening_table_if_not_exist, connect_to_database
 from add_username import add_username_column_to_csv
 import pymysql
 
@@ -59,13 +59,7 @@ def upload_files():
 @app.route('/integration', methods=['POST'])
 def integration():
     # Connect to the database
-    connection = pymysql.connect(
-        host='localhost',
-        user='root',
-        password='root',
-        database='dataviz_m2_proj',
-        charset='utf8mb4',
-    )
+    connection = connect_to_database()
 
     try:
         create_listening_table_if_not_exist()  # Ensure the table exists
@@ -83,7 +77,7 @@ def integration():
 
                 # Integrate the file's data into the database
                 file_path = os.path.join(DOWNLOAD_FOLDER, file_name)
-                integrate_csv_to_database(file_path, connection)
+                integrate_csv_to_database(file_path)
                 flash(f"File '{file_name}' successfully integrated.")
 
         # Delete processed files in the DOWNLOAD_FOLDER
