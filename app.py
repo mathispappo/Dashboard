@@ -2,6 +2,7 @@ import os
 from flask import Flask, request, render_template, flash, redirect, url_for
 from Add_file_to_sql import integrate_csv_to_database, create_listening_table_if_not_exist
 from add_username import add_username_column_to_csv
+import pymysql
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
@@ -55,19 +56,58 @@ def upload_files():
     return redirect(url_for('index'))
 
 
-# Route for integration
 @app.route('/integration', methods=['POST'])
 def integration():
-    # Process the CSV files in the 'download' folder
-    create_listening_table_if_not_exist()  # Ensure the table exists before integrating data
-    integrate_csv_to_database(DOWNLOAD_FOLDER)
+    # Connect to the database
+    connection = pymysql.connect(
+        host='localhost',
+        user='root',
+        password='root',
+        database='dataviz_m2_proj',
+        charset='utf8mb4',
+    )
 
-    # After integration, delete all the files in the DOWNLOAD_FOLDER
-    delete_files_in_directory(DOWNLOAD_FOLDER)
+    try:
+        create_listening_table_if_not_exist()  # Ensure the table exists
 
-    flash("Integration complete and files deleted!")
+        # Loop through all files in the DOWNLOAD_FOLDER
+        for file_name in os.listdir(DOWNLOAD_FOLDER):
+            if file_name.endswith('.csv'):
+                # Extract the username from the file name (before .csv)
+                username = os.path.splitext(file_name)[0]
+
+                # Check if the username already exists in the database
+                if username_exists_in_database(username, connection):
+                    flash(f"Username '{username}' already exists. File '{file_name}' skipped.")
+                    continue
+
+                # Integrate the file's data into the database
+                file_path = os.path.join(DOWNLOAD_FOLDER, file_name)
+                integrate_csv_to_database(file_path, connection)
+                flash(f"File '{file_name}' successfully integrated.")
+
+        # Delete processed files in the DOWNLOAD_FOLDER
+        delete_files_in_directory(DOWNLOAD_FOLDER)
+        flash("Integration complete and files deleted!")
+
+    except Exception as e:
+        flash(f"Error during integration: {e}")
+
+    finally:
+        connection.close()
+
     return redirect(url_for('index'))
 
+
+
+# Function to check if username exists in the database
+def username_exists_in_database(username, connection):
+    """Check if the username already exists in the database."""
+    with connection.cursor() as cursor:
+        sql = "SELECT COUNT(*) FROM listening WHERE username = %s"
+        cursor.execute(sql, (username,))
+        result = cursor.fetchone()
+        return result[0] > 0
 
 # Function to ensure directory exists (you might already have this in your script)
 def ensure_directory_exists(directory):

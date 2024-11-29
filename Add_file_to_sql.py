@@ -12,6 +12,7 @@ def connect_to_database():
         password='root',
         database='dataviz_m2_proj',
         charset='utf8mb4',
+        autocommit=False  # Disable autocommit for better batch performance
     )
 
 
@@ -23,11 +24,12 @@ def create_listening_table_if_not_exist():
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS listening (
                     listening_id INT PRIMARY KEY AUTO_INCREMENT,
-                    username VARCHAR(250),
-                    artist_name VARCHAR(1000),
-                    album_name VARCHAR(250),
-                    song_name VARCHAR(250),
-                    date_listened DATETIME
+                    username VARCHAR(150),
+                    artist_name VARCHAR(150),
+                    album_name VARCHAR(150),
+                    song_name VARCHAR(150),
+                    date_listened DATETIME,
+                    UNIQUE KEY unique_listening (username, artist_name, album_name, song_name, date_listened)
                 );
             """)
             connection.commit()
@@ -35,16 +37,10 @@ def create_listening_table_if_not_exist():
         connection.close()
 
 
-# Ensure the given directory exists
-def ensure_directory_exists(directory):
-    """Ensure that the directory exists, if not, create it."""
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-        print(f"Directory created: {directory}")
-
-
-# Process CSV files in a folder and integrate them into the ListeningDetailed table
 def integrate_csv_to_database(folder_path):
+    """
+    Process CSV files in a folder and integrate them into the database using batching for better performance.
+    """
     # Ensure the folder path is valid
     folder_path = os.path.abspath(folder_path)
     if not os.path.exists(folder_path):
@@ -63,6 +59,11 @@ def integrate_csv_to_database(folder_path):
 
                     # Open and process the CSV file
                     file_path = os.path.join(folder_path, filename)
+                    print(f"Processing file: {filename}")
+
+                    # Prepare a batch insert list
+                    batch_insert_data = []
+
                     with open(file_path, mode='r', encoding='utf-8') as csvfile:
                         csvreader = csv.reader(csvfile)
 
@@ -72,12 +73,11 @@ def integrate_csv_to_database(folder_path):
                                 continue
 
                             # Extract data from the row
-                            username_from_file, artist_name, album_title, song_title, date_listened = row
+                            username_from_file, artist_name, album_name, song_name, date_listened = row
 
                             # Ensure the username matches the filename
                             if username != username_from_file:
-                                print(
-                                    f"Skipping row with mismatched username. Expected {username}, found {username_from_file}")
+                                print(f"Skipping row with mismatched username. Expected {username}, found {username_from_file}")
                                 continue
 
                             # Convert the date to the appropriate format
@@ -85,25 +85,27 @@ def integrate_csv_to_database(folder_path):
                                 date_obj = datetime.strptime(date_listened, "%d %b %Y %H:%M")
                                 formatted_date = date_obj.strftime("%Y-%m-%d %H:%M:%S")
                             except ValueError:
-                                # If the date format is invalid, skip this row
                                 print(f"Skipping row with invalid date: {row}")
                                 continue
 
-                            # Check if the listening record already exists in ListeningDetailed table
-                            cursor.execute("""
-                                SELECT * FROM listening 
-                                WHERE username = %s AND artist_name = %s AND album_name = %s AND song_name = %s AND date_listened = %s
-                            """, (username, artist_name, album_title, song_title, formatted_date))
+                            # Append the row to the batch list
+                            batch_insert_data.append((username, artist_name, album_name, song_name, formatted_date))
 
-                            if not cursor.fetchone():  # If no record exists, insert it
-                                cursor.execute("""
-                                    INSERT INTO listening (username, artist_name, album_name, song_name, date_listened)
-                                    VALUES (%s, %s, %s, %s, %s)
-                                """, (username, artist_name, album_title, song_title, formatted_date))
-                                connection.commit()
-                            else:
-                                print(
-                                    f"Skipping duplicate listening entry for {username}, {song_title}, {formatted_date}")
+                    # Perform bulk insert for this file
+                    if batch_insert_data:
+                        try:
+                            # Use INSERT IGNORE to skip duplicates
+                            cursor.executemany("""
+                                INSERT IGNORE INTO listening (username, artist_name, album_name, song_name, date_listened)
+                                VALUES (%s, %s, %s, %s, %s);
+                            """, batch_insert_data)
+                            connection.commit()
+                            print(f"Inserted {len(batch_insert_data)} rows from {filename} successfully.")
+                        except Exception as e:
+                            connection.rollback()
+                            print(f"Error inserting data from {filename}: {e}")
+                    else:
+                        print(f"No valid data found in {filename}. Skipping file.")
 
     except Exception as e:
         print(f"An error occurred: {e}")
@@ -111,13 +113,13 @@ def integrate_csv_to_database(folder_path):
         connection.close()
 
 
-# # Ensure that the input directory is an absolute path
-# input_directory = os.path.join(os.path.dirname(__file__), 'data')  # Use relative path if running the script from the project root
-# output_directory = os.path.join(os.path.dirname(__file__), 'download')  # Output directory for processed files
+# Main execution
+if __name__ == '__main__':
+    # Path to the folder containing CSV files
+    folder_path = './download'
 
-# # Ensure the output directory exists before running the function
-# ensure_directory_exists(output_directory)
+    # Ensure table exists
+    create_listening_table_if_not_exist()
 
-# # Now process the CSV files in the given directory
-# create_listening_table_if_not_exist()  # Ensure the table exists before integrating data
-# integrate_csv_to_database(output_directory)
+    # Integrate CSV files
+    integrate_csv_to_database(folder_path)
